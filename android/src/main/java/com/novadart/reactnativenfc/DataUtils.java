@@ -101,4 +101,33 @@ public class DataUtils {
         return r;
     }
 
+    public static String convertByteArrayToHexString(byte[] inarray) {
+        if (inarray == null) {
+            return "";
+        }
+        int i, j, in;
+        String[] hex = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"};
+        String out = "";
+
+        for (j = 0; j < inarray.length; ++j) {
+            in = (int) inarray[j] & 0xff;
+            i = (in >> 4) & 0x0f;
+            out += hex[i];
+            i = in & 0x0f;
+            out += hex[i];
+        }
+        return out;
+    }
+
+    public static byte[] convertStringArrayToByteArray(String[] inarray) {
+        if (inarray == null) {
+            return new byte[]{};
+        }
+        byte[] out = new byte[inarray.length];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = Byte.parseByte(inarray[i],16);
+        }
+        return out;
+    }
+
 }
