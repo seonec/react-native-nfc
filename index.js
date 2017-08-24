@@ -22,7 +22,7 @@ let _registerToEvents = () => {
     if(!_registeredToEvents){
         NativeModules.ReactNativeNFC.getStartUpNfcData(_notifyListeners);
         DeviceEventEmitter.addListener('__NFC_DISCOVERED', _notifyListeners);
-		DeviceEventEmitter.addListener('__NFC_COMMAND', _notifyCommandListeners);
+        DeviceEventEmitter.addListener('__NFC_COMMAND', _notifyCommandListeners);
         _registeredToEvents = true;
     }
 };
@@ -55,9 +55,29 @@ NFC.addCommandListener = (callback) => {
     _registerToEvents();
 };
 
-
+  //comandi: http://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf
 NFC.sendCommand = (command) => {
 	return NativeModules.ReactNativeNFC.sendCommand(command);
+}
+
+NFC.readPage = (pageNum, callback) => {
+    NativeModules.ReactNativeNFC.sendCommandWithCallback(["30",pageNum],callback);
+}
+
+NFC.readUID = (callback) => {
+    NativeModules.ReactNativeNFC.sendCommandWithCallback(["30","0"],(data) => {
+        //legge le prime 4 pagine, a noi servono i bytes 0-2 + 4-7
+        let uid = data.substr(0,6)+""+data.substr(8,8);
+        callback(uid);
+    });
+}
+
+NFC.readVersion = (callback) => {
+    NativeModules.ReactNativeNFC.sendCommandWithCallback(["60"],callback);
+}
+
+NFC.readSignature = (callback) => {
+    NativeModules.ReactNativeNFC.sendCommandWithCallback(["3C","00"],callback);
 }
 
 export default NFC;
