@@ -107,25 +107,6 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         }
     }
 
-    @ReactMethod
-    public void sendCommand(ReadableArray command) {
-        if (lastTag == null) {
-            return;
-        }
-        NfcA nfc = NfcA.get(lastTag);
-        try {
-            nfc.connect();
-        } catch (IOException e) {
-            return;
-        }
-        String[] commandArray = new String[command.size()];
-        for (int i = 0; i < command.size(); i++) {
-            commandArray[i] = command.getString(i);
-        }
-        SendNFCACommandTask task = new SendNFCACommandTask(getReactApplicationContext(),DataUtils.convertStringArrayToByteArray(commandArray));
-        task.execute(nfc);
-    }
-
 
     @ReactMethod
     public void sendCommandWithCallback(ReadableArray command, Callback callback) {
@@ -134,7 +115,9 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         }
         NfcA nfc = NfcA.get(lastTag);
         try {
-            nfc.connect();
+            if (!nfc.isConnected()) {
+                nfc.connect();
+            }
         } catch (IOException e) {
             return;
         }
@@ -146,6 +129,21 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         task.execute(nfc);
     }
 
+    @ReactMethod
+    public void isTagAvailable(Callback callback) {
+        if (lastTag == null) {
+            callback.invoke(false);
+            return;
+        }
+        NfcA nfc = NfcA.get(lastTag);
+        try {
+            nfc.connect();
+            nfc.close();
+            callback.invoke(true);
+        } catch (IOException e) {
+            callback.invoke(false);
+        }
+    }
 
 
     private void sendEvent(@Nullable WritableMap payload) {

@@ -17,11 +17,6 @@ public class SendNFCACommandTask extends AsyncTask<NfcA,Void,String> {
     private final ReactApplicationContext context;
     private final Callback callback;
 
-    public SendNFCACommandTask(ReactApplicationContext context, byte[] command) {
-        this.context = context;
-        this.command = command;
-        this.callback = null;
-    }
 
     public SendNFCACommandTask(ReactApplicationContext context, byte[] command, Callback callback) {
         this.context = context;
@@ -43,14 +38,6 @@ public class SendNFCACommandTask extends AsyncTask<NfcA,Void,String> {
 
     @Override
     protected void onPostExecute(String data) {
-        if (callback == null) {
-            context
-                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                    .emit(ReactNativeNFCModule.EVENT_NFC_COMMAND, data);
-        } else {
-            callback.invoke(data);
-        }
-
-
+        callback.invoke(data);
     }
 }
