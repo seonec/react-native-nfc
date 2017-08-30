@@ -57,6 +57,10 @@ NFC.readPage = (pageNum, callback) => {
 
 NFC.readUID = (callback) => {
     NativeModules.ReactNativeNFC.sendCommandWithCallback(["3A","0", "1"],(data) => { //FAST_READ
+        if (data == null) {
+            callback("");
+            return;
+        }
         //a noi servono i bytes 0-2 + 4-7
         let uid = data.substr(0,6)+""+data.substr(8,8);
         callback(uid);
@@ -74,5 +78,6 @@ NFC.readSignature = (callback) => {
 NFC.isTagAvailable = (callback) => {
     NativeModules.ReactNativeNFC.isTagAvailable(callback);
 }
+
 
 export default NFC;

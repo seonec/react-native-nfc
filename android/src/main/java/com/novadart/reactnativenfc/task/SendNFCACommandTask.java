@@ -2,12 +2,11 @@ package com.novadart.reactnativenfc.task;
 
 import android.nfc.tech.NfcA;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.novadart.reactnativenfc.DataUtils;
-import com.novadart.reactnativenfc.ReactNativeNFCModule;
 
 import java.io.IOException;
 
@@ -32,6 +31,7 @@ public class SendNFCACommandTask extends AsyncTask<NfcA,Void,String> {
             tag.close();
             return out;
         }catch (IOException e) {
+            Log.e("ReactNativeNFCModule", "Error: "+e.getMessage());
             return null;
         }
     }
