@@ -2,13 +2,11 @@ package com.novadart.reactnativenfc;
 
 
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Intent;
-import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
-import android.nfc.Tag;
-import android.os.AsyncTask;
-import android.os.Parcelable;
-import android.support.annotation.Nullable;
+import android.nfc.tech.NfcA;
+import android.util.Log;
 
 import com.facebook.react.bridge.ActivityEventListener;
 import com.facebook.react.bridge.Callback;
@@ -16,14 +14,21 @@ import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableMap;
-import com.facebook.react.modules.core.DeviceEventManagerModule;
-import com.novadart.reactnativenfc.parser.NdefParser;
-import com.novadart.reactnativenfc.parser.TagParser;
+import com.novadart.reactnativenfc.handler.BaseNFCHandler;
+import com.novadart.reactnativenfc.handler.NdefHandler;
+import com.novadart.reactnativenfc.handler.TagHandler;
+import com.novadart.reactnativenfc.task.IsTagAvailableTask;
+import com.novadart.reactnativenfc.task.SendNFCACommandTask;
+
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 
 public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements ActivityEventListener,LifecycleEventListener {
 
-    private static final String EVENT_NFC_DISCOVERED = "__NFC_DISCOVERED";
+    public static final String EVENT_NFC_DISCOVERED = "__NFC_DISCOVERED";
 
     // caches the last message received, to pass it to the listeners when it reconnects
     private WritableMap startupNfcData;
@@ -31,10 +36,27 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
 
     private boolean startupIntentProcessed = false;
 
+    private NfcAdapter mNfcAdapter;
+
+    private List<BaseNFCHandler> handlers;
+    private NdefHandler ndefHandler;
+    private TagHandler tagHandler;
+
+    private Callback cb = null;
+
     public ReactNativeNFCModule(ReactApplicationContext reactContext) {
         super(reactContext);
+
+        ndefHandler = new NdefHandler(reactContext);
+        tagHandler = new TagHandler(reactContext);
+
+        handlers = new LinkedList<>();
+        handlers.add(ndefHandler);
+        handlers.add(tagHandler);
+
         reactContext.addActivityEventListener(this);
         reactContext.addLifecycleEventListener(this);
+        Log.d("ReactNativeNFCModule", "Starting");
     }
 
     @Override
@@ -42,9 +64,9 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         return "ReactNativeNFC";
     }
 
-
     @Override
-    public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {}
+    public void onActivityResult(Activity activity, int requestCode, int resultCode, Intent data) {
+    }
 
     @Override
     public void onNewIntent(Intent intent) {
@@ -52,30 +74,9 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
     }
 
     private void handleIntent(Intent intent, boolean startupIntent) {
-        if (intent != null && intent.getAction() != null) {
-
-            switch (intent.getAction()){
-
-                case NfcAdapter.ACTION_NDEF_DISCOVERED:
-                    Parcelable[] rawMessages = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
-
-                    if (rawMessages != null) {
-                        NdefMessage[] messages = new NdefMessage[rawMessages.length];
-                        for (int i = 0; i < rawMessages.length; i++) {
-                            messages[i] = (NdefMessage) rawMessages[i];
-                        }
-                        processNdefMessages(messages,startupIntent);
-                    }
-                    break;
-
-                // ACTION_TAG_DISCOVERED is an unlikely case, according to https://developer.android.com/guide/topics/connectivity/nfc/nfc.html
-                case NfcAdapter.ACTION_TAG_DISCOVERED:
-                case NfcAdapter.ACTION_TECH_DISCOVERED:
-                    Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-                    processTag(tag,startupIntent);
-                    break;
-
-            }
+        Log.d("ReactNativeNFCModule", "Incoming intent "+intent.getAction());
+        for (BaseNFCHandler handler : handlers) {
+            handler.handle(intent);
         }
     }
 
@@ -98,86 +99,74 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
     }
 
 
-    private void sendEvent(@Nullable WritableMap payload) {
-        getReactApplicationContext()
-                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                .emit(EVENT_NFC_DISCOVERED, payload); }
-
-
-    private void processNdefMessages(NdefMessage[] messages, boolean startupIntent){
-        NdefProcessingTask task = new NdefProcessingTask(startupIntent);
-        task.execute(messages);
+    @ReactMethod
+    public void sendCommandWithCallback(ReadableArray command, Callback callback) {
+        if (tagHandler.getTag() == null) {
+            return;
+        }
+        NfcA nfc = NfcA.get(tagHandler.getTag());
+        try {
+            if (!nfc.isConnected()) {
+                nfc.connect();
+            }
+        } catch (IOException e) {
+            return;
+        }
+        String[] commandArray = new String[command.size()];
+        for (int i = 0; i < command.size(); i++) {
+            commandArray[i] = command.getString(i);
+        }
+        SendNFCACommandTask task = new SendNFCACommandTask(getReactApplicationContext(),DataUtils.convertStringArrayToByteArray(commandArray),callback);
+        task.execute(nfc);
     }
 
-    private void processTag(Tag tag, boolean startupIntent){
-        TagProcessingTask task = new TagProcessingTask(startupIntent);
-        task.execute(tag);
+    @ReactMethod
+    public void isTagAvailable(Callback callback) {
+        if (tagHandler.getTag() == null) {
+            callback.invoke(false);
+            return;
+        }
+        IsTagAvailableTask task = new IsTagAvailableTask(callback);
+        task.execute(tagHandler.getTag());
     }
 
     @Override
     public void onHostResume() {
         if(!startupIntentProcessed){
-            if(getReactApplicationContext().getCurrentActivity() != null){ // it shouldn't be null but you never know
+            if(getReactApplicationContext().getCurrentActivity() != null){
                 // necessary because NFC might cause the activity to start and we need to catch that data too
                 handleIntent(getReactApplicationContext().getCurrentActivity().getIntent(),true);
             }
             startupIntentProcessed = true;
         }
+
+        if (mNfcAdapter != null) {
+            setupForegroundDispatch(getCurrentActivity(), mNfcAdapter);
+        } else {
+            mNfcAdapter = NfcAdapter.getDefaultAdapter(getReactApplicationContext());
+        }
     }
 
     @Override
-    public void onHostPause() {}
+    public void onHostPause() {
+        if (mNfcAdapter != null) {
+            stopForegroundDispatch(getCurrentActivity(), mNfcAdapter);
+        }
+    }
 
     @Override
-    public void onHostDestroy() {}
+    public void onHostDestroy() { }
 
+    public void setupForegroundDispatch(final Activity activity, NfcAdapter adapter) {
+        Log.e("ReactNativeNFCModule", "Setup foreground dispatch");
+        final Intent intent = new Intent(activity.getApplicationContext(), activity.getClass());
+        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-    private class NdefProcessingTask extends AsyncTask<NdefMessage[],Void,WritableMap> {
-
-        private final boolean startupIntent;
-
-        NdefProcessingTask(boolean startupIntent) {
-            this.startupIntent = startupIntent;
-        }
-
-        @Override
-        protected WritableMap doInBackground(NdefMessage[]... params) {
-            NdefMessage[] messages = params[0];
-            return NdefParser.parse(messages);
-        }
-
-        @Override
-        protected void onPostExecute(WritableMap ndefData) {
-            if(startupIntent) {
-                startupNfcData = ndefData;
-            }
-            sendEvent(ndefData);
-        }
+        final PendingIntent pendingIntent = PendingIntent.getActivity(activity.getApplicationContext(), 0, intent, 0);
+        adapter.enableForegroundDispatch(activity, pendingIntent, null, null);
     }
 
-
-    private class TagProcessingTask extends AsyncTask<Tag,Void,WritableMap> {
-
-        private final boolean startupIntent;
-
-        TagProcessingTask(boolean startupIntent) {
-            this.startupIntent = startupIntent;
-        }
-
-        @Override
-        protected WritableMap doInBackground(Tag... params) {
-            Tag tag = params[0];
-            return TagParser.parse(tag);
-        }
-
-        @Override
-        protected void onPostExecute(WritableMap tagData) {
-            if(startupIntent) {
-                startupNfcData = tagData;
-            }
-            sendEvent(tagData);
-        }
+    public void stopForegroundDispatch(final Activity activity, NfcAdapter adapter) {
+        adapter.disableForegroundDispatch(activity);
     }
-
-
 }
