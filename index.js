@@ -49,6 +49,9 @@ NFC.addListener = (callback) => {
     _registerToEvents();
 };
 
+NFC.removeAllListeners = () => {
+    _listeners = [];
+}
 
   //comandi: http://www.nxp.com/docs/en/data-sheet/NTAG213_215_216.pdf
 NFC.readPage = (pageNum, callback) => {

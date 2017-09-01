@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.nfc.NfcAdapter;
+import android.nfc.Tag;
 import android.nfc.tech.NfcA;
 import android.util.Log;
 
@@ -41,7 +42,6 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
     private List<BaseNFCHandler> handlers;
     private NdefHandler ndefHandler;
     private TagHandler tagHandler;
-
     private Callback cb = null;
 
     public ReactNativeNFCModule(ReactApplicationContext reactContext) {
@@ -57,6 +57,7 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         reactContext.addActivityEventListener(this);
         reactContext.addLifecycleEventListener(this);
         Log.d("ReactNativeNFCModule", "Starting");
+        onHostResume();
     }
 
     @Override
@@ -77,6 +78,17 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         Log.d("ReactNativeNFCModule", "Incoming intent "+intent.getAction());
         for (BaseNFCHandler handler : handlers) {
             handler.handle(intent);
+        }
+        Log.d("ReactNativeNFCModule", "End intent handling "+intent.getAction());
+    }
+
+    private Tag getReadTag(){
+        if (tagHandler.getTag() != null) {
+            return tagHandler.getTag();
+        } else if (ndefHandler.getTag() != null) {
+            return ndefHandler.getTag();
+        } else {
+            return null;
         }
     }
 
@@ -101,10 +113,10 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
 
     @ReactMethod
     public void sendCommandWithCallback(ReadableArray command, Callback callback) {
-        if (tagHandler.getTag() == null) {
+        if (getReadTag() == null) {
             return;
         }
-        NfcA nfc = NfcA.get(tagHandler.getTag());
+        NfcA nfc = NfcA.get(getReadTag());
         try {
             if (!nfc.isConnected()) {
                 nfc.connect();
@@ -122,12 +134,12 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
 
     @ReactMethod
     public void isTagAvailable(Callback callback) {
-        if (tagHandler.getTag() == null) {
+        if (getReadTag() == null) {
             callback.invoke(false);
             return;
         }
         IsTagAvailableTask task = new IsTagAvailableTask(callback);
-        task.execute(tagHandler.getTag());
+        task.execute(getReadTag());
     }
 
     @Override

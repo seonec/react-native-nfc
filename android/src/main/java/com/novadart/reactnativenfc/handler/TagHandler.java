@@ -33,7 +33,7 @@ public class TagHandler extends BaseNFCHandler {
 
     @Override
     protected String[] getFilteredIntents() {
-        return new String[]{NfcAdapter.ACTION_TAG_DISCOVERED, NfcAdapter.ACTION_TECH_DISCOVERED, NfcAdapter.ACTION_NDEF_DISCOVERED};
+        return new String[]{NfcAdapter.ACTION_TAG_DISCOVERED, NfcAdapter.ACTION_TECH_DISCOVERED};
     }
 
     public Tag getTag(){

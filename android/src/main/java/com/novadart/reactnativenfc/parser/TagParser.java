@@ -18,7 +18,7 @@ import java.io.IOException;
 
 public class TagParser {
 
-    public static WritableMap parse(Tag tag, Intent intent){
+    public static WritableMap parse(Tag tag){
         if (tag == null) return null;
         WritableMap result = new WritableNativeMap();
         result.putString("type", NfcDataType.TAG.name());
@@ -76,7 +76,6 @@ public class TagParser {
                 }
             }
         }
-
         result.putMap("data",data);
         return result;
     }

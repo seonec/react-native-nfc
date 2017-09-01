@@ -34,7 +34,7 @@ public class NdefParser {
                 }
             }
         }
-        result.putArray("data", data);
+        result.putArray("ndef", data);
         return result;
     }
 

@@ -22,7 +22,7 @@ public class TagProcessingTask extends AsyncTask<Tag,Void,WritableMap> {
     @Override
     protected WritableMap doInBackground(Tag... params) {
         Tag tag = params[0];
-        return TagParser.parse(tag,intent);
+        return TagParser.parse(tag);
     }
 
     @Override
