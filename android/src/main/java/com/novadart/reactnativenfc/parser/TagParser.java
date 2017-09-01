@@ -21,7 +21,7 @@ public class TagParser {
     public static WritableMap parse(Tag tag){
         if (tag == null) return null;
         WritableMap result = new WritableNativeMap();
-        result.putString("type", NfcDataType.TAG.name());
+
 
         WritableMap data = new WritableNativeMap();
 
@@ -61,7 +61,22 @@ public class TagParser {
             tech.connect();
             Log.e("ReactNativeNFCModule", "Connected");
             data.putString("signature",DataUtils.convertByteArrayToHexString(readSignature(tech)));
-            data.putString("version",DataUtils.convertByteArrayToHexString(readVersion(tech)));
+            byte[] versionByteArray = readVersion(tech);
+            if (versionByteArray.length == 8) {
+                byte v = versionByteArray[6];
+                switch (v) {
+                    case 15:
+                        result.putString("type", "DL_NTAG_213");
+                        break;
+                    case 17:
+                        result.putString("type", "DL_NTAG_215");
+                        break;
+                    case 19:
+                        result.putString("type", "DL_NTAG_216");
+                        break;
+                }
+            }
+            data.putString("version",DataUtils.convertByteArrayToHexString(versionByteArray));
             data.putString("memory",DataUtils.convertByteArrayToHexString(readMem(tech)));
 
 

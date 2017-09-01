@@ -2,6 +2,8 @@ package com.novadart.reactnativenfc.parser;
 
 import android.nfc.FormatException;
 import android.nfc.NdefMessage;
+import android.nfc.Tag;
+import android.nfc.tech.Ndef;
 import android.util.Base64;
 
 import com.facebook.react.bridge.WritableArray;
@@ -21,9 +23,15 @@ import java.util.Iterator;
 
 public class NdefParser {
 
-    public static WritableMap parse(NdefMessage[] messages){
+    public static WritableMap parse(NdefMessage[] messages, Tag tag){
+        Ndef ndef = Ndef.get(tag);
         WritableMap result = new WritableNativeMap();
-        result.putString("type", NfcDataType.NDEF.name());
+        if (ndef == null) {
+            result.putString("type", "Not an ndef");
+        } else {
+            result.putString("type", translateType(ndef.getType()));
+        }
+
         WritableArray data = new WritableNativeArray();
         if(messages != null) {
             for (NdefMessage m : messages) {
@@ -91,5 +99,21 @@ public class NdefParser {
         result.putString("type", NdefRecordType.MIME.name());
         result.putString("data", record.getData() != null ? Base64.encodeToString(record.getData(), Base64.DEFAULT) : null);
         return result;
+    }
+
+    static String translateType(String type) {
+        String translation;
+        if (type.equals(Ndef.NFC_FORUM_TYPE_1)) {
+            translation = "NFC Forum Type 1";
+        } else if (type.equals(Ndef.NFC_FORUM_TYPE_2)) {
+            translation = "NFC Forum Type 2";
+        } else if (type.equals(Ndef.NFC_FORUM_TYPE_3)) {
+            translation = "NFC Forum Type 3";
+        } else if (type.equals(Ndef.NFC_FORUM_TYPE_4)) {
+            translation = "NFC Forum Type 4";
+        } else {
+            translation = type;
+        }
+        return translation;
     }
 }

@@ -2,6 +2,7 @@ package com.novadart.reactnativenfc.task;
 
 import android.nfc.NdefMessage;
 import android.nfc.Tag;
+import android.nfc.tech.Ndef;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -23,7 +24,7 @@ public class NdefProcessingTask extends AsyncTask<Object,Void,WritableMap> {
     protected WritableMap doInBackground(Object... params) {
         NdefMessage[] messages = (NdefMessage[]) params[0];
         Tag tag = (Tag) params[1];
-        WritableMap wmap = NdefParser.parse(messages);
+        WritableMap wmap = NdefParser.parse(messages,tag);
         wmap.merge(TagParser.parse(tag));
         return wmap;
     }
