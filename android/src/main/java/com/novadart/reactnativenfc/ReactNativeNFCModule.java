@@ -4,8 +4,11 @@ package com.novadart.reactnativenfc;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.nfc.tech.Ndef;
+import android.nfc.tech.NdefFormatable;
 import android.nfc.tech.NfcA;
 import android.util.Log;
 
@@ -21,6 +24,7 @@ import com.novadart.reactnativenfc.handler.BaseNFCHandler;
 import com.novadart.reactnativenfc.handler.NdefHandler;
 import com.novadart.reactnativenfc.handler.TagHandler;
 import com.novadart.reactnativenfc.task.IsTagAvailableTask;
+import com.novadart.reactnativenfc.task.NdefProcessingTask;
 import com.novadart.reactnativenfc.task.SendNFCACommandTask;
 import com.novadart.reactnativenfc.task.TagProcessingTask;
 
@@ -188,11 +192,24 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
                         @Override
                         public void onTagDiscovered(Tag tag) {
                             lastTagRead = tag;
-                            TagProcessingTask task = new TagProcessingTask(getReactApplicationContext());
-                            task.execute(tag);
+                            Ndef ndef = Ndef.get(tag);
+
+                            Log.e("ReactNativeNFCModule","ndef = "+ndef);
+
+                            if (ndef != null) {
+                                Log.e("ReactNativeNFCModule","Is NDEF");
+                                NdefMessage message = ndef.getCachedNdefMessage();
+                                Log.e("ReactNativeNFCModule","message = "+message);
+                                NdefProcessingTask task = new NdefProcessingTask(getReactApplicationContext());
+                                task.execute(new NdefMessage[]{message},tag);
+                            } else {
+                                TagProcessingTask task = new TagProcessingTask(getReactApplicationContext());
+                                task.execute(tag);
+                            }
+
                         }
                     },
-                    NfcAdapter.FLAG_READER_NFC_A|NfcAdapter.FLAG_READER_NFC_B|NfcAdapter.FLAG_READER_NFC_F|NfcAdapter.FLAG_READER_NFC_V|NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK|NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
+                    NfcAdapter.FLAG_READER_NFC_A|NfcAdapter.FLAG_READER_NFC_B|NfcAdapter.FLAG_READER_NFC_F|NfcAdapter.FLAG_READER_NFC_V|NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
                     ,null);
         } else {
             Log.e("ReactNativeNFCModule", "Setup foreground dispatch");

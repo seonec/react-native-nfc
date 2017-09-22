@@ -1,6 +1,6 @@
 'use strict';
 
-import { NativeModules, DeviceEventEmitter } from 'react-native';
+import { NativeModules, DeviceEventEmitter, Platform } from 'react-native';
 
 export const NfcDataType = {
     NDEF : "NDEF",
@@ -45,6 +45,9 @@ let _notifyCommandListeners = (data) => {
 const NFC = {};
 
 NFC.addListener = (callback) => {
+    if (Platform.OS === 'ios') {
+        return;
+    }
     _listeners.push(callback);
     _registerToEvents();
 };
