@@ -13,10 +13,8 @@ import com.novadart.reactnativenfc.parser.TagParser;
 
 public class TagProcessingTask extends AsyncTask<Tag,Void,WritableMap> {
     private final ReactApplicationContext context;
-    private final Intent intent;
-    public TagProcessingTask(ReactApplicationContext context, Intent intent) {
+    public TagProcessingTask(ReactApplicationContext context) {
         this.context = context;
-        this.intent = intent;
     }
 
     @Override

@@ -27,7 +27,7 @@ public class TagHandler extends BaseNFCHandler {
     @Override
     protected void doHandle(Intent intent) {
         tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-        TagProcessingTask task = new TagProcessingTask(context,intent);
+        TagProcessingTask task = new TagProcessingTask(context);
         task.execute(tag);
     }
 

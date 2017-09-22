@@ -22,6 +22,7 @@ import com.novadart.reactnativenfc.handler.NdefHandler;
 import com.novadart.reactnativenfc.handler.TagHandler;
 import com.novadart.reactnativenfc.task.IsTagAvailableTask;
 import com.novadart.reactnativenfc.task.SendNFCACommandTask;
+import com.novadart.reactnativenfc.task.TagProcessingTask;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -43,6 +44,8 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
     private NdefHandler ndefHandler;
     private TagHandler tagHandler;
     private Callback cb = null;
+    private boolean useNfcReaderMode = true;
+    private Tag lastTagRead = null;
 
     public ReactNativeNFCModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -88,7 +91,7 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         } else if (ndefHandler.getTag() != null) {
             return ndefHandler.getTag();
         } else {
-            return null;
+            return lastTagRead;
         }
     }
 
@@ -142,6 +145,15 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         task.execute(getReadTag());
     }
 
+    @ReactMethod
+    public void setReaderMode(Boolean value) {
+        if (value != useNfcReaderMode) {
+            stopNfcReader(getCurrentActivity(), mNfcAdapter);
+            useNfcReaderMode = value;
+            setupNfcReader(getCurrentActivity(), mNfcAdapter);
+        }
+    }
+
     @Override
     public void onHostResume() {
         if(!startupIntentProcessed){
@@ -153,7 +165,7 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         }
 
         if (mNfcAdapter != null) {
-            setupForegroundDispatch(getCurrentActivity(), mNfcAdapter);
+            setupNfcReader(getCurrentActivity(), mNfcAdapter);
         } else {
             mNfcAdapter = NfcAdapter.getDefaultAdapter(getReactApplicationContext());
         }
@@ -162,23 +174,41 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
     @Override
     public void onHostPause() {
         if (mNfcAdapter != null) {
-            stopForegroundDispatch(getCurrentActivity(), mNfcAdapter);
+            stopNfcReader(getCurrentActivity(), mNfcAdapter);
         }
     }
 
     @Override
     public void onHostDestroy() { }
 
-    public void setupForegroundDispatch(final Activity activity, NfcAdapter adapter) {
-        Log.e("ReactNativeNFCModule", "Setup foreground dispatch");
-        final Intent intent = new Intent(activity.getApplicationContext(), activity.getClass());
-        intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    public void setupNfcReader(final Activity activity, NfcAdapter adapter) {
+        if (useNfcReaderMode) {
+            adapter.enableReaderMode(activity,
+                    new NfcAdapter.ReaderCallback() {
+                        @Override
+                        public void onTagDiscovered(Tag tag) {
+                            lastTagRead = tag;
+                            TagProcessingTask task = new TagProcessingTask(getReactApplicationContext());
+                            task.execute(tag);
+                        }
+                    },
+                    NfcAdapter.FLAG_READER_NFC_A|NfcAdapter.FLAG_READER_NFC_B|NfcAdapter.FLAG_READER_NFC_F|NfcAdapter.FLAG_READER_NFC_V|NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK|NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
+                    ,null);
+        } else {
+            Log.e("ReactNativeNFCModule", "Setup foreground dispatch");
+            final Intent intent = new Intent(activity.getApplicationContext(), activity.getClass());
+            intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-        final PendingIntent pendingIntent = PendingIntent.getActivity(activity.getApplicationContext(), 0, intent, 0);
-        adapter.enableForegroundDispatch(activity, pendingIntent, null, null);
+            final PendingIntent pendingIntent = PendingIntent.getActivity(activity.getApplicationContext(), 0, intent, 0);
+            adapter.enableForegroundDispatch(activity, pendingIntent, null, null);
+        }
     }
 
-    public void stopForegroundDispatch(final Activity activity, NfcAdapter adapter) {
-        adapter.disableForegroundDispatch(activity);
+    public void stopNfcReader(final Activity activity, NfcAdapter adapter) {
+        if (useNfcReaderMode) {
+            adapter.disableReaderMode(activity);
+        } else {
+            adapter.disableForegroundDispatch(activity);
+        }
     }
 }
