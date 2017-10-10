@@ -1,6 +1,5 @@
 package com.novadart.reactnativenfc.parser;
 
-import android.content.Intent;
 import android.nfc.Tag;
 import android.nfc.tech.MifareUltralight;
 import android.nfc.tech.NfcA;
@@ -12,7 +11,6 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.WritableNativeMap;
 import com.novadart.reactnativenfc.DataUtils;
-import com.novadart.reactnativenfc.NfcDataType;
 
 import java.io.IOException;
 
@@ -81,7 +79,7 @@ public class TagParser {
 
 
         } catch (IOException e) {
-            Log.e("ReactNativeNFCModule", e.getMessage());
+            Log.e("ReactNativeNFCModule", "Errore: "+e.getMessage());
         } finally {
             if (tech != null) {
                 try {
@@ -109,7 +107,7 @@ public class TagParser {
                 byte[] memtemp = readPage(tech, i);
                 System.arraycopy(memtemp, 0, mem, i * 4, 4);
             } catch (IOException e){
-                Log.e("ReactNativeNFCModule", e.getMessage());
+                Log.e("ReactNativeNFCModule", "Errore: "+e.getMessage());
             }
         }
 
