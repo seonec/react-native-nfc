@@ -3,6 +3,9 @@ package com.novadart.reactnativenfc.parser;
 import android.nfc.Tag;
 import android.nfc.tech.MifareUltralight;
 import android.nfc.tech.NfcA;
+import android.nfc.tech.NfcB;
+import android.nfc.tech.NfcF;
+import android.nfc.tech.NfcV;
 import android.nfc.tech.TagTechnology;
 import android.util.Log;
 
@@ -27,6 +30,9 @@ public class TagParser {
         String[] techListStr = tag.getTechList();
         boolean isNfcA = false;
         boolean isMifareUltraLight = false;
+        boolean isNfcV = false;
+        boolean isNfcB = false;
+        boolean isNfcF = false;
         if(techListStr != null){
             for (String s: techListStr) {
                 techList.pushString(s);
@@ -34,6 +40,12 @@ public class TagParser {
                     isNfcA = true;
                 } else if (s.equals("android.nfc.tech.MifareUltralight")) {
                     isMifareUltraLight = true;
+                } else if (s.equals("android.nfc.tech.NfcV")) {
+                    isNfcV = true;
+                } else if (s.equals("android.nfc.tech.NfcB")) {
+                    isNfcB = true;
+                } else if (s.equals("android.nfc.tech.NfcF")) {
+                    isNfcF = true;
                 }
             }
         }
@@ -51,6 +63,15 @@ public class TagParser {
             } else if (isNfcA) {
                 tech = NfcA.get(tag);
                 Log.e("ReactNativeNFCModule", "Tag tech: NfcA");
+            } else if (isNfcV) {
+                tech = NfcV.get(tag);
+                Log.e("ReactNativeNFCModule", "Tag tech: NfcV");
+            } else if (isNfcB) {
+                tech = NfcB.get(tag);
+                Log.e("ReactNativeNFCModule", "Tag tech: NfcB");
+            } else if (isNfcF) {
+                tech = NfcF.get(tag);
+                Log.e("ReactNativeNFCModule", "Tag tech: NfcF");
             }
             if (tech == null) {
                 throw new IOException("Unrecognized tag tech");
@@ -126,7 +147,11 @@ public class TagParser {
 
     private static byte[] readSignature(TagTechnology tech) throws IOException{
         Log.e("ReactNativeNFCModule", "Reading signature");
-        return doCommand(tech,new byte[]{(byte) 0x3c, (byte) 0x0});
+        if (tech instanceof NfcV) {
+            return doCommand(tech,new byte[]{(byte) 0xBD});
+        } else {
+            return doCommand(tech, new byte[]{(byte) 0x3c, (byte) 0x0});
+        }
     }
     private static byte[] doCommand(TagTechnology tech, byte[] command) throws IOException{
         if (tech instanceof MifareUltralight){
@@ -137,6 +162,10 @@ public class TagParser {
             NfcA nfca;
             nfca = (NfcA)tech;
             return nfca.transceive(command);
+        } else if (tech instanceof NfcV){
+            NfcV nfc;
+            nfc = (NfcV) tech;
+            return nfc.transceive(command);
         }
         return null;
     }

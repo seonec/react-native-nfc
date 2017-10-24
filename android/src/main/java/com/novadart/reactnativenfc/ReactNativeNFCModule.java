@@ -7,9 +7,14 @@ import android.content.Intent;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.nfc.tech.MifareUltralight;
 import android.nfc.tech.Ndef;
 import android.nfc.tech.NdefFormatable;
 import android.nfc.tech.NfcA;
+import android.nfc.tech.NfcB;
+import android.nfc.tech.NfcF;
+import android.nfc.tech.NfcV;
+import android.nfc.tech.TagTechnology;
 import android.util.Log;
 
 import com.facebook.react.bridge.ActivityEventListener;
@@ -25,7 +30,9 @@ import com.novadart.reactnativenfc.handler.NdefHandler;
 import com.novadart.reactnativenfc.handler.TagHandler;
 import com.novadart.reactnativenfc.task.IsTagAvailableTask;
 import com.novadart.reactnativenfc.task.NdefProcessingTask;
+import com.novadart.reactnativenfc.task.SendMifareUltralightCommandTask;
 import com.novadart.reactnativenfc.task.SendNFCACommandTask;
+import com.novadart.reactnativenfc.task.SendNFCVCommandTask;
 import com.novadart.reactnativenfc.task.TagProcessingTask;
 
 import java.io.IOException;
@@ -123,20 +130,40 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
         if (getReadTag() == null) {
             return;
         }
-        NfcA nfc = NfcA.get(getReadTag());
+        TagTechnology tech;
+        tech = MifareUltralight.get(getReadTag());
+        if (tech == null) {
+            tech = NfcA.get(getReadTag());
+        } else if (tech == null) {
+            tech = NfcV.get(getReadTag());
+        }
+        if (tech == null) {
+            Log.e("ReactNativeNFCModule","Unrecognized tag tech");
+            return;
+        }
         try {
-            if (!nfc.isConnected()) {
-                nfc.connect();
+            if (!tech.isConnected()) {
+                tech.connect();
             }
         } catch (IOException e) {
+            Log.e("ReactNativeNFCModule","IO Error while trying to connect to tag: "+e.getMessage());
             return;
         }
         String[] commandArray = new String[command.size()];
         for (int i = 0; i < command.size(); i++) {
             commandArray[i] = command.getString(i);
         }
-        SendNFCACommandTask task = new SendNFCACommandTask(getReactApplicationContext(),DataUtils.convertStringArrayToByteArray(commandArray),callback);
-        task.execute(nfc);
+        if (tech instanceof NfcA) {
+            SendNFCACommandTask task = new SendNFCACommandTask(getReactApplicationContext(), DataUtils.convertStringArrayToByteArray(commandArray), callback);
+            task.execute((NfcA)tech);
+        } else if (tech instanceof NfcV) {
+            SendNFCVCommandTask task = new SendNFCVCommandTask(getReactApplicationContext(), DataUtils.convertStringArrayToByteArray(commandArray), callback);
+            task.execute((NfcV)tech);
+        } else {
+            SendMifareUltralightCommandTask task = new SendMifareUltralightCommandTask(getReactApplicationContext(), DataUtils.convertStringArrayToByteArray(commandArray), callback);
+            task.execute((MifareUltralight)tech);
+        }
+
     }
 
     @ReactMethod
