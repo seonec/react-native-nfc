@@ -84,6 +84,9 @@ public class TagParser {
             if (versionByteArray.length == 8) {
                 byte v = versionByteArray[6];
                 switch (v) {
+                    case 14:
+                        result.putString("type", "DL_NTAG_212");
+                        break;
                     case 15:
                         result.putString("type", "DL_NTAG_213");
                         break;
