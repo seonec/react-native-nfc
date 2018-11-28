@@ -125,6 +125,15 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
     }
 
 
+    public static String[] readableArrayToStringArray(ReadableArray readableArray) {
+        String[] string = new String[readableArray.size()];
+        for (int i = 0; i < readableArray.size(); i++) {
+            string[i] = (String)(readableArray.getString(i));
+        }
+        return string;
+    }
+
+
     @ReactMethod
     public void sendCommandsWithCallback(ReadableArray commands, Callback callback) {
 

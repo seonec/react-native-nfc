@@ -30,6 +30,11 @@
   "bundleDependencies": false,
   "contributors": [
     {
+      "name": "Antonio D'Alessio",
+      "email": "antonio.dalessio@codever.it",
+      "url": "giordy"
+    },
+    {
       "name": "Giordano Battilana",
       "email": "giordano.battilana@novadart.com",
       "url": "giordy"
