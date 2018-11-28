@@ -126,6 +126,44 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
 
 
     @ReactMethod
+    public void sendCommandsWithCallback(ReadableArray commands, Callback callback) {
+
+        if (getReadTag() == null) {
+            callback.invoke("tag is null?");
+            return;
+        }
+
+        try {
+
+            NfcA tech = NfcA.get(getReadTag());
+            tech.setTimeout(2000);
+            tech.connect();
+
+            String[] commandArray = readableArrayToStringArray(commands);
+
+            byte[] out = new byte[]{};
+
+            for(int i = 0; i < commands.size(); i++) {
+                byte[] command = DataUtils.decodeHexString(commandArray[i]);
+                out = tech.transceive(command);
+            }
+
+            if (tech.isConnected()) {
+                tech.close();
+            }
+
+            callback.invoke("true");
+
+        } catch (Exception e) {
+            callback.invoke("Ops, something went wrong :-(");
+        }
+
+
+    }
+
+
+
+    @ReactMethod
     public void sendCommandWithCallback(ReadableArray command, Callback callback) {
         if (getReadTag() == null) {
             return;

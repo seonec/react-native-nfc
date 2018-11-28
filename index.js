@@ -85,5 +85,9 @@ NFC.isTagAvailable = (callback) => {
     NativeModules.ReactNativeNFC.isTagAvailable(callback);
 }
 
+NFC.sendNFCACommands = (bytes, callback) => {
+    NativeModules.ReactNativeNFC.sendCommandsWithCallback(bytes, callback);
+}
+
 
 export default NFC;
