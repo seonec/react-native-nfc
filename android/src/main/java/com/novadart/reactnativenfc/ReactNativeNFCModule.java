@@ -484,8 +484,8 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
           Log.d(TAG, "setPasswordLog: " + DataUtils.convertByteArrayToHexString(setPassword) + " length" + setPassword.length );
 
           if (setPassword.length == 1) {
-            //byte[] destroy = destroyNFCV(tech, xorPwd);
-            //Log.d(TAG, "destroyLog: " + DataUtils.convertByteArrayToHexString(destroy) + " length" + destroy.length );
+            byte[] destroy = destroyNFCV(tech, xorPwd);
+            Log.d(TAG, "destroyLog: " + DataUtils.convertByteArrayToHexString(destroy) + " length" + destroy.length );
             result = "true";
           }
 
