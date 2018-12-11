@@ -302,4 +302,193 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
             adapter.disableForegroundDispatch(activity);
         }
     }
+
+
+    public byte[] sendNFCVCommand(NfcV tech, byte[] cmd) {
+
+        // default result
+        byte[] result = new byte[]{(byte)0x00};
+
+        if (getReadTag() == null) {
+            return result;
+        }
+
+        try {
+            tech.connect();
+            result = tech.transceive(cmd);
+            return result;
+        } catch(Exception e) {
+            closeNFCVconnection(tech);
+            //send EE result => error
+            result = new byte[]{(byte)0xEE};
+            Log.d(TAG, "resultSendLog " + e );
+            return result;
+        }
+    }
+
+
+
+    public byte[] getNFCVRandomNumber(NfcV tech) {
+
+        byte[] ID = tech.getTag().getId();
+
+        // addressed
+        byte[] cmd = new byte[11];
+        cmd[0] = (byte) 0x22;
+        cmd[1] = (byte) 0xB2;
+        cmd[2] = (byte) 0x04;
+
+        System.arraycopy(ID, 0, cmd, 3, ID.length);
+
+        byte[] randomnumber = sendNFCVCommand(tech, cmd);
+
+        return randomnumber;
+
+    }
+
+
+    public byte[] xorPwd(byte[] pwdParam, byte[] randomnumber) {
+      /*
+          The XOR password has to be calculated with the password and two times the received
+          random number from the last GET RANDOM NUMBER command:
+          XOR_Password[31:0] = Password[31:0] XOR {Random_Number[15:0],Random_Number[15:0]}.
+      */
+
+      // ICODE SLIX2 default pwd
+      int[] defaultPwd = new int[]{
+        (int)0x0F,
+        (int)0x0F,
+        (int)0x0F,
+        (int)0x0F
+      };
+
+      int[] doubleRandomNumber = new int[]{
+        (int)randomnumber[0],
+        (int)randomnumber[1],
+        (int)randomnumber[0],
+        (int)randomnumber[1]
+      };
+
+
+      int[] pwd = new int[4];
+
+      if (pwdParam.length != 4) {
+        pwd = defaultPwd;
+      }else{
+        for(int i=0; i < pwdParam.length; i++) {
+          pwd[i] = (int)pwdParam[i];
+        }
+      }
+
+      byte[] result = new byte[4];
+
+      int i = 0;
+      for (int b : pwd)
+        result[i] = (byte)((b ^ doubleRandomNumber[i++]) & 0xff);
+
+      return result;
+
+
+    }
+
+    public byte[] destroyNFCV(NfcV tech, byte[] xorPwd) {
+
+      byte[] ID = tech.getTag().getId();
+
+      byte[] cmd = new byte[]{
+        (byte) 0x62, // flags
+        (byte) 0xB9, // cmd
+        (byte) 0x04, // IC mfg code
+        0,0,0,0,0,0,0,0, // UID
+        (byte) xorPwd[0],
+        (byte) xorPwd[1],
+        (byte) xorPwd[2],
+        (byte) xorPwd[3],
+      };
+
+      System.arraycopy(ID, 0, cmd, 3, 8);
+
+      byte[] result = sendNFCVCommand(tech, cmd);
+
+      return result;
+    }
+
+
+
+
+    public byte[] setPassword(NfcV tech, byte[] xorPwd) {
+
+      byte[] ID = tech.getTag().getId();
+
+      byte[] cmd = new byte[]{
+        (byte) 0x62, // flags
+        (byte) 0xB3, // cmd
+        (byte) 0x04, // IC mfg code
+        0,0,0,0,0,0,0,0, // UID
+        (byte) 0x08, // pwd identifier 0x08 destroy
+        (byte) xorPwd[0],
+        (byte) xorPwd[1],
+        (byte) xorPwd[2],
+        (byte) xorPwd[3],
+      };
+
+      System.arraycopy(ID, 0, cmd, 3, 8);
+
+      byte[] result = sendNFCVCommand(tech, cmd);
+
+      return result;
+    }
+
+
+    public Boolean closeNFCVconnection(NfcV tech) {
+        try {
+            if (tech.isConnected()) {
+                tech.close();
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+
+    @ReactMethod
+    public void destroyNFCV(String pwd, Callback callback) {
+
+        String result = "false";
+
+        NfcV tech = NfcV.get(getReadTag());
+
+        // 3 bytes response
+        byte[] randomnumberResponse = getNFCVRandomNumber(tech);
+        closeNFCVconnection(tech);
+
+
+
+        if (randomnumberResponse.length == 3) {
+
+          //get last two byte. First byte is flag
+          byte[] randomnumber = new byte[]{
+            (byte) randomnumberResponse[1],
+            (byte) randomnumberResponse[2]
+          };
+
+          byte[] xorPwd = xorPwd(DataUtils.decodeHexString(pwd), randomnumber);
+
+          // 1 byte response if all right. 2 bytes response in error
+          byte[] setPassword = setPassword(tech, xorPwd);
+          closeNFCVconnection(tech);
+
+          Log.d(TAG, "setPasswordLog: " + DataUtils.convertByteArrayToHexString(setPassword) + " length" + setPassword.length );
+
+          if (setPassword.length == 1) {
+            //byte[] destroy = destroyNFCV(tech, xorPwd);
+            //Log.d(TAG, "destroyLog: " + DataUtils.convertByteArrayToHexString(destroy) + " length" + destroy.length );
+            result = "true";
+          }
+
+        }
+
+        callback.invoke(result);
+    }
 }

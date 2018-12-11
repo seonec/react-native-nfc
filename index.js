@@ -89,5 +89,9 @@ NFC.sendNFCACommands = (bytes, callback) => {
     NativeModules.ReactNativeNFC.sendCommandsWithCallback(bytes, callback);
 }
 
+NFC.destroyNFCV = (pwd, callback) => {
+    NativeModules.ReactNativeNFC.destroyNFCV(pwd, callback);
+}
+
 
 export default NFC;
