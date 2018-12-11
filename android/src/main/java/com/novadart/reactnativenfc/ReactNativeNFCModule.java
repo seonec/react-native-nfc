@@ -57,6 +57,7 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
     private Callback cb = null;
     private boolean useNfcReaderMode = true;
     private Tag lastTagRead = null;
+    private static final String TAG = "android";
 
     public ReactNativeNFCModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -304,6 +305,7 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
     }
 
 
+
     public byte[] sendNFCVCommand(NfcV tech, byte[] cmd) {
 
         // default result
@@ -491,4 +493,5 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
 
         callback.invoke(result);
     }
+
 }
