@@ -459,39 +459,48 @@ public class ReactNativeNFCModule extends ReactContextBaseJavaModule implements 
 
         String result = "false";
 
-        NfcV tech = NfcV.get(getReadTag());
 
-        // 3 bytes response
-        byte[] randomnumberResponse = getNFCVRandomNumber(tech);
-        closeNFCVconnection(tech);
+        try {
 
+            NfcV tech = NfcV.get(getReadTag());
 
+            // 3 bytes response
+            byte[] randomnumberResponse = getNFCVRandomNumber(tech);
+            closeNFCVconnection(tech);
 
-        if (randomnumberResponse.length == 3) {
+            byte[] setPassword = new byte[]{};
+            byte[] destroy = new byte[]{};
 
-          //get last two byte. First byte is flag
-          byte[] randomnumber = new byte[]{
-            (byte) randomnumberResponse[1],
-            (byte) randomnumberResponse[2]
-          };
+            if (randomnumberResponse.length == 3) {
 
-          byte[] xorPwd = xorPwd(DataUtils.decodeHexString(pwd), randomnumber);
+              //get last two byte. First byte is flag
+              byte[] randomnumber = new byte[]{
+                (byte) randomnumberResponse[1],
+                (byte) randomnumberResponse[2]
+              };
 
-          // 1 byte response if all right. 2 bytes response in error
-          byte[] setPassword = setPassword(tech, xorPwd);
-          closeNFCVconnection(tech);
+              byte[] xorPwd = xorPwd(DataUtils.decodeHexString(pwd), randomnumber);
 
-          Log.d(TAG, "setPasswordLog: " + DataUtils.convertByteArrayToHexString(setPassword) + " length" + setPassword.length );
+              // 1 byte response if all right. 2 bytes response in error
+              setPassword = setPassword(tech, xorPwd);
+              closeNFCVconnection(tech);
 
-          if (setPassword.length == 1) {
-            byte[] destroy = destroyNFCV(tech, xorPwd);
-            Log.d(TAG, "destroyLog: " + DataUtils.convertByteArrayToHexString(destroy) + " length" + destroy.length );
-            result = "true";
-          }
+              Log.d(TAG, "setPasswordLog: " + DataUtils.convertByteArrayToHexString(setPassword) + " length" + setPassword.length );
 
+              if (setPassword.length == 1) {
+                destroy = destroyNFCV(tech, xorPwd);
+                Log.d(TAG, "destroyLog: " + DataUtils.convertByteArrayToHexString(destroy) + " length" + destroy.length );
+                result = "true";
+              }
+
+            }
+
+            callback.invoke(result + "@ passwordLength: " + setPassword.length + "@ setPassword: " + DataUtils.convertByteArrayToHexString(setPassword) + "@ randomnumberResponse: " + randomnumberResponse + "@ destroy: result:" + DataUtils.convertByteArrayToHexString(destroy));
+
+        }catch (Exception e) {
+            callback.invoke("false @ Ops, something went wrong :-( in destroyNFCV: " + e.getMessage());
         }
 
-        callback.invoke(result);
     }
 
 }
