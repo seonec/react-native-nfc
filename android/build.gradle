@@ -26,7 +26,6 @@ apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion 23
-    buildToolsVersion '25.0.0'
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 23
@@ -47,8 +46,8 @@ repositories {
 }
 
 dependencies {
-    compile 'com.facebook.react:react-native:+'
+    implementation 'com.facebook.react:react-native:+'
     // From node_modules
-    compile 'com.google.code.ndef-tools-for-android:ndeftools:1.2.4'
+    implementation 'com.google.code.ndef-tools-for-android:ndeftools:1.2.4'
 }
 
