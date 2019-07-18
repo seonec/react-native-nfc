@@ -15,8 +15,8 @@ export const NdefRecordType = {
 
 
 let _registeredToEvents = false;
-const _listeners = [];
-const _commandListeners = [];
+let _listeners = [];
+let _commandListeners = [];
 
 let _registerToEvents = () => {
     if(!_registeredToEvents){
